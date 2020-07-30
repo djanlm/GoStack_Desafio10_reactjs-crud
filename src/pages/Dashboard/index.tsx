@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+import { ThemeConsumer } from 'styled-components';
 import Header from '../../components/Header';
 
 import api from '../../services/api';
@@ -27,9 +28,10 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     async function loadFoods(): Promise<void> {
-      // TODO LOAD FOODS
+      await api.get<IFoodPlate[]>('/foods').then(response => {
+        setFoods(response.data);
+      });
     }
-
     loadFoods();
   }, []);
 
@@ -37,7 +39,22 @@ const Dashboard: React.FC = () => {
     food: Omit<IFoodPlate, 'id' | 'available'>,
   ): Promise<void> {
     try {
-      // TODO ADD A NEW FOOD PLATE TO THE API
+      const { name, description, price, image } = food;
+      api
+        .post('/foods', {
+          name,
+          description,
+          price,
+          image,
+          available: true,
+        })
+        .then(response => {
+          setFoods([...foods, response.data]);
+        });
+
+      // await api.get<IFoodPlate[]>('/foods').then(response => {
+      //   setFoods(response.data);
+      // });
     } catch (err) {
       console.log(err);
     }
@@ -47,10 +64,38 @@ const Dashboard: React.FC = () => {
     food: Omit<IFoodPlate, 'id' | 'available'>,
   ): Promise<void> {
     // TODO UPDATE A FOOD PLATE ON THE API
+    try {
+      const { name, description, image, price } = food;
+      api
+        .put(`/foods/${editingFood.id}`, {
+          name,
+          description,
+          image,
+          price,
+          available: editingFood.available,
+        })
+        .then(response => {
+          const index = foods.findIndex(f => f.id === editingFood.id);
+          // remove o elemento que foi editado do arrray foods.
+          foods.splice(index, 1);
+          // repoe o elemento depois da edição, retornado pelo servidor
+          setFoods([...foods, response.data]);
+        });
+    } catch (err) {
+      console.log(err);
+    }
   }
 
   async function handleDeleteFood(id: number): Promise<void> {
-    // TODO DELETE A FOOD PLATE FROM THE API
+    const index = foods.findIndex(food => food.id === editingFood.id);
+    // remove o elemento que será deletado do arrray foods. Assim nao é necessario fazer outra chamada a api pra retornar a lista de foods novamente
+    foods.splice(index, 1);
+    await api.delete(`/foods/${id}`);
+
+    // await api.get<IFoodPlate[]>('/foods').then(response => {
+    //   setFoods(response.data);
+    // });
+    setEditingFood({} as IFoodPlate);
   }
 
   function toggleModal(): void {
@@ -62,7 +107,8 @@ const Dashboard: React.FC = () => {
   }
 
   function handleEditFood(food: IFoodPlate): void {
-    // TODO SET THE CURRENT EDITING FOOD ID IN THE STATE
+    toggleEditModal();
+    setEditingFood(food);
   }
 
   return (
